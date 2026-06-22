@@ -199,6 +199,9 @@ export function useDetectionProcess() {
         ctrl.signal,
       );
       queryClient.invalidateQueries({ queryKey: ["detections"] });
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return;
+      toast.error(e instanceof Error ? e.message : t("detection.detectFailed"));
     } finally {
       timer.stopTimer();
     }

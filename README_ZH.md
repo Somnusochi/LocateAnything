@@ -293,6 +293,24 @@ Canvas 画框模式，查看/标注双模式切换。
 - **统一 SSE 状态**：`GET /api/v1/model/events` 单连接推送三模型状态，前端不再轮询
 - **手动卸载**：每个模型均有独立卸载按钮和 API 端点
 - **GPU 内存**：策略模式（`gpu_memory.py`）— CUDA `expandable_segments` / MPS `synchronize`+`empty_cache`+`gc`
+- **透明加载错误**：模型加载/推理失败会把真实后端错误返回前端，不再只显示笼统的检测失败
+
+### 排查：卡在 `加载到 GPU`
+
+如果 VLM 一直停在 `加载到 GPU`，通常说明模型文件已经被找到，问题发生在 PyTorch 将 LocateAnything-3B 搬到 CUDA/MPS 的阶段。现在前端会直接显示后端真实错误，请优先查看 toast 或后端日志，常见原因包括 CUDA OOM、NVIDIA runtime 未透传、驱动/runtime 不匹配，或依赖导入失败。
+
+Docker 环境可先检查：
+
+```bash
+docker compose logs backend --tail=200
+docker compose exec backend python - <<'PY'
+import torch
+print("cuda:", torch.cuda.is_available())
+print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
+print("mem:", torch.cuda.mem_get_info() if torch.cuda.is_available() else None)
+PY
+nvidia-smi
+```
 
 ## API 概览
 

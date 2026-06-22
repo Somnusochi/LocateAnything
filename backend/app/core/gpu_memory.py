@@ -145,6 +145,15 @@ def _detect_device(override: str = "") -> str:
     )
 
 
+def validate_vlm_device(device: str) -> None:
+    """Fail fast only for unsupported devices, without imposing a VRAM cutoff."""
+    if device == "cpu":
+        raise RuntimeError(
+            "LocateAnything-3B cannot run on CPU in this application. "
+            "Expose a CUDA GPU to the container or use Apple Silicon MPS in manual setup."
+        )
+
+
 def create_memory_manager(device: str) -> GPUMemoryManager:
     """Create the right strategy for *device*."""
     if device == "cuda":

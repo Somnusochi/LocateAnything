@@ -294,6 +294,24 @@ Canvas-based annotation with View / Draw modes.
 - **Unified SSE status**: `GET /api/v1/model/events` streams VLM, SAM2, SAM3 status in one connection
 - **Manual unload**: each model has its own unload button and API endpoint
 - **GPU memory**: Strategy Pattern (`gpu_memory.py`) — CUDA `expandable_segments` / MPS `synchronize`+`empty_cache`+`gc`
+- **Transparent load errors**: model load/inference failures are returned to the UI instead of being hidden behind generic detection errors
+
+### Troubleshooting: Stuck at `Loading to GPU`
+
+If the VLM model stays at `Loading to GPU`, the model files were already found and the failure is likely happening while PyTorch moves LocateAnything-3B onto CUDA/MPS. The UI now surfaces the backend error directly, so check the toast message or backend logs for the real cause, such as CUDA OOM, missing NVIDIA runtime, driver mismatch, or a dependency import error.
+
+Useful Docker checks:
+
+```bash
+docker compose logs backend --tail=200
+docker compose exec backend python - <<'PY'
+import torch
+print("cuda:", torch.cuda.is_available())
+print("device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else None)
+print("mem:", torch.cuda.mem_get_info() if torch.cuda.is_available() else None)
+PY
+nvidia-smi
+```
 
 ## API Reference
 

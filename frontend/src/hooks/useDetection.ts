@@ -62,7 +62,7 @@ export function useDetectMutation() {
       qc.invalidateQueries({ queryKey: ["model-status"] });
       if (useSam2) qc.invalidateQueries({ queryKey: ["sam2-status"] });
     },
-    onError: () => toast.error(t("detection.detectFailed")),
+    onError: (err: Error) => toast.error(err.message || t("detection.detectFailed")),
   });
 }
 

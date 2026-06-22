@@ -16,7 +16,7 @@ from PIL import Image
 
 from ..core.config import settings
 from ..core.exceptions import InferenceError
-from ..core.gpu_memory import get_memory_manager
+from ..core.gpu_memory import get_memory_manager, validate_vlm_device
 
 logger = logging.getLogger(__name__)
 
@@ -178,6 +178,14 @@ def _progress_callback(state: str, stage: str, progress: int):
             _model_state["error"] = ""
 
 
+def _set_model_error(exc: Exception) -> None:
+    with _state_lock:
+        _model_state["state"] = ModelState.ERROR
+        _model_state["stage"] = ""
+        _model_state["progress"] = 0
+        _model_state["error"] = str(exc)
+
+
 def _load_worker_sync(model_path: str, device: str):
     """Load the model synchronously (runs in background thread)."""
     global _worker
@@ -193,11 +201,7 @@ def _load_worker_sync(model_path: str, device: str):
         _start_watchdog()
     except Exception as exc:
         logger.exception("Model loading failed")
-        with _state_lock:
-            _model_state["state"] = ModelState.ERROR
-            _model_state["stage"] = ""
-            _model_state["progress"] = 0
-            _model_state["error"] = str(exc)
+        _set_model_error(exc)
     finally:
         _load_complete.set()
 
@@ -273,7 +277,13 @@ def _get_worker() -> LocateAnythingWorker:
     if not (model_dir_path.exists() and (model_dir_path / "config.json").exists()):
         model_path = settings.model_id
 
-    device = settings.resolved_device
+    try:
+        device = settings.resolved_device
+        validate_vlm_device(device)
+    except Exception as exc:
+        logger.exception("Model device preflight failed")
+        _set_model_error(exc)
+        raise
 
     # If already loading in background, wait for it
     with _state_lock:
@@ -359,7 +369,7 @@ def detect(image_path: str | Path, categories: list[str]) -> dict:
     try:
         worker = _get_worker()
     except Exception as exc:
-        raise InferenceError() from exc
+        raise InferenceError(f"Model loading failed: {exc}") from exc
     _bump_activity()
 
     gpu_mem = get_memory_manager()
@@ -384,7 +394,7 @@ def detect(image_path: str | Path, categories: list[str]) -> dict:
             result = worker.detect(img, categories)
             raw_text = result["answer"]
         except Exception as exc:
-            raise InferenceError() from exc
+            raise InferenceError(f"Model inference failed: {exc}") from exc
 
         boxes = parse_boxes(raw_text, w, h)
         logger.info("Detection: %s -> %d boxes for %s", image_path, len(boxes), categories)

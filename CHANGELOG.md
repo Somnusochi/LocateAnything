@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.5.12 (2026-06-22)
+
+### Model Loading Diagnostics
+- Fix: propagate real VLM model loading and inference exceptions through API responses instead of returning only a generic detection failure.
+- Fix: batch detection no longer swallows non-abort errors, so frontend toasts now show backend details such as CUDA OOM, missing GPU runtime, driver errors, or dependency import failures.
+- Fix: model status switches to `error` when device preflight fails, preventing stale `Loading to GPU` status after an unsupported CPU/no-GPU setup.
+- Docs: add EN/ZH troubleshooting steps for VLM stuck at `Loading to GPU` with Docker log and CUDA diagnostic commands.
+
 ## v1.5.9 (2026-06-08)
 
 ### Performance & Infrastructure

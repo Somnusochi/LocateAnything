@@ -47,10 +47,11 @@ export function useBatchDetection() {
           onEach(data, files[i], i, elapsed);
         }
       } catch (e) {
-        if (e instanceof DOMException && e.name === "AbortError") {
-          // silently handle abort
-        }
         setBatchProgress({ current: 0, total: 0 });
+        if (e instanceof DOMException && e.name === "AbortError") {
+          return { results, elapsed };
+        }
+        throw e;
       }
       return { results, elapsed };
     },
