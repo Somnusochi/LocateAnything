@@ -106,3 +106,40 @@ def test_detect_raises_loading_error_detail(monkeypatch):
         locate_anything.detect("/tmp/not-needed.jpg", ["cat"])
 
     assert exc_info.value.detail == "Model loading failed: CUDA out of memory"
+
+
+def test_find_cached_checkpoint_prefers_snapshot_layout(tmp_path):
+    from app.services.sam2_service import _find_cached_checkpoint
+
+    checkpoint = (
+        tmp_path
+        / "hub"
+        / "models--facebook--sam2.1-hiera-base-plus"
+        / "snapshots"
+        / "abc"
+        / "sam2.1_hiera_base_plus.pt"
+    )
+    checkpoint.parent.mkdir(parents=True)
+    checkpoint.write_bytes(b"fake")
+
+    assert (
+        _find_cached_checkpoint(
+            "facebook/sam2.1-hiera-base-plus",
+            "sam2.1_hiera_base_plus.pt",
+            hf_home=tmp_path,
+        )
+        == checkpoint
+    )
+
+
+def test_find_cached_checkpoint_returns_none_when_missing(tmp_path):
+    from app.services.sam2_service import _find_cached_checkpoint
+
+    assert (
+        _find_cached_checkpoint(
+            "facebook/sam2.1-hiera-base-plus",
+            "sam2.1_hiera_base_plus.pt",
+            hf_home=tmp_path,
+        )
+        is None
+    )

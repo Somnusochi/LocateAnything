@@ -34,8 +34,8 @@ COPY --from=builder /install /usr/local
 COPY --from=builder /sam3-venv /app/sam3-venv
 
 RUN useradd -m -u 1000 appuser \
-    && mkdir -p /app/uploads /app/model /app/training_runs \
-    && chown -R appuser:appuser /app
+    && mkdir -p /app/uploads /app/model /app/training_runs /home/appuser/.cache/huggingface \
+    && chown -R appuser:appuser /app /home/appuser/.cache
 USER appuser
 
 COPY --chown=appuser:appuser app ./app
@@ -45,7 +45,8 @@ COPY --chown=appuser:appuser alembic ./alembic
 
 ENV PYTHONPATH=/app \
     PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    HF_HOME=/home/appuser/.cache/huggingface
 
 EXPOSE 8000 8002
 

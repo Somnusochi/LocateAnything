@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.5.13 (2026-06-29)
+
+### SAM2 Offline Cache
+- Fix: mount the shared Hugging Face cache at the backend `appuser` home in Docker and set `HF_HOME` explicitly.
+- Fix: load SAM2 from local Hugging Face cache or `SAM2_CHECKPOINT_PATH` before falling back to network download.
+- Fix: make `cli.py download --models=sam2` use the same `sam2.build_sam2_hf` checkpoint path as runtime.
+- Docs: clarify SAM2 cache location and offline deployment layout in EN/ZH README.
+
 ## v1.5.12 (2026-06-22)
 
 ### Model Loading Diagnostics

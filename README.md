@@ -123,7 +123,7 @@ docker compose up -d --build
 **GPU Support** — `docker-compose.yml` now has built-in GPU passthrough configured. No manual editing required.
 
 **Persistent Storage (Docker volumes):**
-- `pgdata` — Database · `model-cache` — VLM, SAM2 & SAM3 models · `uploads` — User images/videos · `training-data` — YOLO training outputs
+- `pgdata` — Database · `model-cache` — VLM model · `sam3-cache` — Hugging Face cache for SAM2/SAM3 · `uploads` — User images/videos · `training-data` — YOLO training outputs
 
 **Backup / Restore:**
 
@@ -178,6 +178,7 @@ PYTHONPATH=. alembic upgrade head
 
 ```bash
 huggingface-cli download nvidia/LocateAnything-3B --local-dir backend/model
+python -c "from sam2.build_sam import build_sam2_hf; build_sam2_hf('facebook/sam2.1-hiera-base-plus', device='cpu')"
 ```
 
 **Launch:**

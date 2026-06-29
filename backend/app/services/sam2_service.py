@@ -5,8 +5,10 @@ from __future__ import annotations
 import contextlib
 import enum
 import logging
+import os
 import threading
 import time
+from pathlib import Path
 
 import numpy as np
 import torch
@@ -48,19 +50,19 @@ _load_complete = threading.Event()
 class SegmentAnythingWorker:
     def __init__(
         self,
-        model_id: str = "facebook/sam2.1-hiera-base-plus",
+        model_id: str | None = None,
         device: str | None = None,
         progress_cb=None,
     ):
-        from sam2.build_sam import build_sam2_hf
         from sam2.sam2_image_predictor import SAM2ImagePredictor
 
         self.device = device or settings.resolved_device
-        logger.info("Loading SAM2 (%s) to %s...", model_id, self.device)
+        self.model_id = model_id or settings.sam2_model_id
+        logger.info("Loading SAM2 (%s) to %s...", self.model_id, self.device)
 
-        # Stage 1: download model
+        # Stage 1: resolve/download model
         self._set_progress(progress_cb, "downloading", "model", 30)
-        sam2_model = build_sam2_hf(model_id, device="cpu")
+        sam2_model = _build_sam2_model(self.model_id)
 
         # Stage 2: move to GPU
         self._set_progress(progress_cb, "loading", "gpu", 80)
@@ -147,6 +149,47 @@ def _find_contours(mask: np.ndarray):
         return contours
     except ImportError:
         return []
+
+
+def _hf_home() -> Path:
+    return Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
+
+
+def _hf_repo_cache_dir(model_id: str, hf_home: Path | None = None) -> Path:
+    return (hf_home or _hf_home()) / "hub" / f"models--{model_id.replace('/', '--')}"
+
+
+def _find_cached_checkpoint(
+    model_id: str, checkpoint_name: str, hf_home: Path | None = None
+) -> Path | None:
+    repo_dir = _hf_repo_cache_dir(model_id, hf_home=hf_home)
+    for path in repo_dir.glob(f"snapshots/*/{checkpoint_name}"):
+        if path.is_file():
+            return path
+    for path in repo_dir.rglob(checkpoint_name):
+        if path.is_file():
+            return path
+    return None
+
+
+def _build_sam2_model(model_id: str):
+    from sam2.build_sam import HF_MODEL_ID_TO_FILENAMES, build_sam2, build_sam2_hf
+
+    config_name, checkpoint_name = HF_MODEL_ID_TO_FILENAMES[model_id]
+
+    if settings.sam2_checkpoint_path:
+        ckpt_path = Path(settings.sam2_checkpoint_path).expanduser()
+        if not ckpt_path.is_file():
+            raise FileNotFoundError(f"SAM2_CHECKPOINT_PATH does not exist: {ckpt_path}")
+        logger.info("Loading SAM2 checkpoint from SAM2_CHECKPOINT_PATH=%s", ckpt_path)
+        return build_sam2(config_file=config_name, ckpt_path=str(ckpt_path), device="cpu")
+
+    cached_checkpoint = _find_cached_checkpoint(model_id, checkpoint_name)
+    if cached_checkpoint is not None:
+        logger.info("Loading SAM2 checkpoint from local Hugging Face cache: %s", cached_checkpoint)
+        return build_sam2(config_file=config_name, ckpt_path=str(cached_checkpoint), device="cpu")
+
+    return build_sam2_hf(model_id, device="cpu")
 
 
 # ── Module-level singleton ────────────────────────────

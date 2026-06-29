@@ -123,7 +123,7 @@ docker compose up -d --build
 **GPU 支持** — `docker-compose.yml` 现已内置 GPU 直通配置，直接拉起即可，无需手动修改配置。
 
 **持久化存储（Docker 卷）：**
-- `pgdata` — 数据库 · `model-cache` — VLM、SAM2、SAM3 模型 · `uploads` — 用户上传 · `training-data` — 训练输出
+- `pgdata` — 数据库 · `model-cache` — VLM 模型 · `sam3-cache` — SAM2/SAM3 使用的 Hugging Face 缓存 · `uploads` — 用户上传 · `training-data` — 训练输出
 
 **备份/恢复：**
 
@@ -178,6 +178,7 @@ PYTHONPATH=. alembic upgrade head
 
 ```bash
 huggingface-cli download nvidia/LocateAnything-3B --local-dir backend/model
+python -c "from sam2.build_sam import build_sam2_hf; build_sam2_hf('facebook/sam2.1-hiera-base-plus', device='cpu')"
 ```
 
 **启动：**

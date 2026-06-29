@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     model_dir: str = ""
     device: str = ""
     model_id: str = "nvidia/LocateAnything-3B"
+    sam2_model_id: str = "facebook/sam2.1-hiera-base-plus"
+    sam2_checkpoint_path: str = ""
 
     @property
     def resolved_device(self) -> str:

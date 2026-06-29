@@ -215,15 +215,15 @@ def download_vlm():
 def download_sam2():
     step("SAM2 model (facebook/sam2.1-hiera-base-plus, ~2.4GB)...")
     cache_dir = Path.home() / ".cache" / "huggingface" / "hub" / "models--facebook--sam2.1-hiera-base-plus"
-    if cache_dir.exists() and any(cache_dir.rglob("*.safetensors")):
+    if cache_dir.exists() and any(cache_dir.rglob("sam2.1_hiera_base_plus.pt")):
         ok("already cached")
         return
     print("  Downloading SAM2... (~5-15 min)")
     try:
         run(
             [str(PYTHON), "-c",
-             "from transformers import AutoModelForMaskGeneration; "
-             f"AutoModelForMaskGeneration.from_pretrained('{SAM2_MODEL_ID}', trust_remote_code=True)"],
+             "from sam2.build_sam import build_sam2_hf; "
+             f"build_sam2_hf('{SAM2_MODEL_ID}', device='cpu')"],
             cwd=BACKEND,
         )
         ok("downloaded")

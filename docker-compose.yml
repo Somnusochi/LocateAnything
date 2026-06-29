@@ -26,10 +26,11 @@ services:
     environment:
       DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/autolabeling
       PYTHONPATH: /app
+      HF_HOME: /home/appuser/.cache/huggingface
       HF_TOKEN: ${HF_TOKEN:-}
     volumes:
       - model-cache:/app/model
-      - sam3-cache:/root/.cache/huggingface
+      - sam3-cache:/home/appuser/.cache/huggingface
       - uploads:/app/uploads
       - training-data:/app/training_runs
     depends_on:
