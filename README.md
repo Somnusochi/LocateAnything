@@ -18,7 +18,7 @@
 
 **Images or videos in → YOLO model out**, with VLM auto-labeling (LocateAnything-3B), SAM2.1 / SAM3 mask refinement, and human-in-the-loop correction. Multi-format export, one-click YOLO training (detect & segment), video keyframe extraction, and model validation — all GPU-accelerated on macOS MPS and Windows/Linux CUDA.
 
-![Architecture](docs/architecture_en.png)
+![Architecture](docs/architecture_en.webp)
 
 > See [Architecture & Workflow Documentation](docs/architecture_diagram_en.md) for detailed Mermaid diagrams.
 
@@ -43,11 +43,11 @@ Comprehensive guides: quick start, annotation best practices, training parameter
 
 | VLM Pre-annotation & Refinement | YOLO Training |
 |--------------------------------|---------------|
-| ![VLM pre-annotation and refinement](docs/1.png) | ![YOLO training](docs/2.png) |
+| ![VLM pre-annotation and refinement](docs/1.webp) | ![YOLO training](docs/2.webp) |
 
 | Video Keyframe Entry | Model Validation |
 |---------------------|-----------------|
-| ![Video keyframe entry](docs/4.png) | ![Model validation](docs/3.png) |
+| ![Video keyframe entry](docs/4.webp) | ![Model validation](docs/3.webp) |
 
 ## Tech Stack
 

@@ -18,7 +18,7 @@
 
 **图片/视频扔进去 → YOLO 模型训出来**，基于 LocateAnything-3B 的 VLM 自动标注 + SAM2.1 / SAM3 mask 精修 + 人工闭环修正。多格式数据集导入导出、训练任务队列、一键 YOLO 训练（检测 & 分割）、视频关键帧提取、模型验证——macOS MPS / Windows & Linux CUDA 全链路 GPU 加速。
 
-![业务流程](docs/architecture_zh.png)
+![业务流程](docs/architecture_zh.webp)
 
 > 详细 Mermaid 图表请查看 [架构与流程文档](docs/architecture_diagram.md)
 
@@ -43,11 +43,11 @@
 
 | VLM 预标注与人工修正 | YOLO 训练 |
 |------------------|-----------|
-| ![VLM 预标注与人工修正](docs/1.png) | ![YOLO 训练](docs/2.png) |
+| ![VLM 预标注与人工修正](docs/1.webp) | ![YOLO 训练](docs/2.webp) |
 
 | 视频关键帧入口 | 模型验证 |
 |--------------|---------|
-| ![视频关键帧入口](docs/4.png) | ![模型验证](docs/3.png) |
+| ![视频关键帧入口](docs/4.webp) | ![模型验证](docs/3.webp) |
 
 ## 技术栈
 
