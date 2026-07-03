@@ -5,6 +5,7 @@ from __future__ import annotations
 import contextlib
 import enum
 import logging
+import os
 import re
 import sys
 import threading
@@ -164,8 +165,33 @@ _last_activity: float = 0.0
 _watchdog_thread: threading.Thread | None = None
 _watchdog_stop: threading.Event | None = None
 _lock: threading.Lock = threading.Lock()
+_model_lock: threading.RLock = threading.RLock()
 _load_thread: threading.Thread | None = None
 _load_complete = threading.Event()
+
+
+def _unload_cuda_batch_engine() -> bool:
+    engine = sys.modules.get("locateanything_batch.engine")
+    if engine is None:
+        return False
+    model = getattr(engine, "_model", None)
+    if model is not None:
+        del model
+    engine._model = None
+    engine._tok = None
+    engine._proc = None
+    engine._st = None
+    engine._hp = None
+    engine._gu = None
+    return model is not None
+
+
+def _resolve_model_path() -> str:
+    model_path = settings.resolved_model_dir
+    model_dir_path = Path(model_path)
+    if not (model_dir_path.exists() and (model_dir_path / "config.json").exists()):
+        return settings.model_id
+    return model_path
 
 
 def _progress_callback(state: str, stage: str, progress: int):
@@ -272,10 +298,10 @@ def _get_worker() -> LocateAnythingWorker:
     if _worker is not None:
         return _worker
 
-    model_path = settings.resolved_model_dir
-    model_dir_path = Path(model_path)
-    if not (model_dir_path.exists() and (model_dir_path / "config.json").exists()):
-        model_path = settings.model_id
+    if _unload_cuda_batch_engine():
+        get_memory_manager().full_cleanup()
+
+    model_path = _resolve_model_path()
 
     try:
         device = settings.resolved_device
@@ -365,51 +391,184 @@ def _get_max_long_side() -> int:
     return _max_long_side
 
 
-def detect(image_path: str | Path, categories: list[str]) -> dict:
-    try:
-        worker = _get_worker()
-    except Exception as exc:
-        raise InferenceError(f"Model loading failed: {exc}") from exc
-    _bump_activity()
-
-    gpu_mem = get_memory_manager()
-    gpu_mem.empty_cache()
-
+def _prepare_detection_image(image_path: str | Path) -> tuple[Image.Image, int, int, int, int]:
     img = Image.open(image_path).convert("RGB")
+    orig_w, orig_h = img.size
+    w, h = orig_w, orig_h
+
+    longest = max(w, h)
+    cap = _get_max_long_side()
+    if longest > cap:
+        scale = cap / longest
+        new_w, new_h = int(w * scale), int(h * scale)
+        logger.info("Resizing image %dx%d -> %dx%d", w, h, new_w, new_h)
+        img = img.resize((new_w, new_h), Image.LANCZOS)
+        w, h = new_w, new_h
+
+    return img, w, h, orig_w, orig_h
+
+
+def _detect_query(categories: list[str]) -> str:
+    return "</c>".join(categories)
+
+
+def _get_cuda_batch_engine():
+    global _worker
+    device = settings.resolved_device
+    validate_vlm_device(device)
+    if device != "cuda":
+        return None
+
+    if _worker is not None:
+        del _worker.model
+        del _worker.tokenizer
+        del _worker.processor
+        _worker = None
+        get_memory_manager().full_cleanup()
+
+    model_path = _resolve_model_path()
+    os.environ["LA3B_MODEL"] = model_path
+
     try:
-        orig_w, orig_h = img.size
-        w, h = orig_w, orig_h
+        from locateanything_batch import engine
+    except ImportError as exc:
+        raise RuntimeError(
+            "CUDA batch engine is unavailable. Ensure backend/locateanything_batch is present."
+        ) from exc
 
-        # Downscale large images to avoid GPU OOM (ViT attention is quadratic)
-        longest = max(w, h)
-        cap = _get_max_long_side()
-        if longest > cap:
-            scale = cap / longest
-            new_w, new_h = int(w * scale), int(h * scale)
-            logger.info("Resizing image %dx%d -> %dx%d", w, h, new_w, new_h)
-            img = img.resize((new_w, new_h), Image.LANCZOS)
-            w, h = new_w, new_h
+    if getattr(engine, "MODEL", None) != model_path and getattr(engine, "_model", None) is None:
+        engine.MODEL = model_path
 
+    with _state_lock:
+        _model_state["state"] = ModelState.LOADING
+        _model_state["stage"] = "cuda_batch"
+        _model_state["progress"] = 50
+        _model_state["error"] = ""
+
+    try:
+        engine.load()
+    except Exception as exc:
+        _set_model_error(exc)
+        raise
+
+    with _state_lock:
+        _model_state["state"] = ModelState.LOADED
+        _model_state["stage"] = ""
+        _model_state["progress"] = 100
+        _model_state["error"] = ""
+    _start_watchdog()
+    return engine
+
+
+def detect(image_path: str | Path, categories: list[str]) -> dict:
+    with _model_lock:
         try:
-            result = worker.detect(img, categories)
-            raw_text = result["answer"]
+            worker = _get_worker()
         except Exception as exc:
-            raise InferenceError(f"Model inference failed: {exc}") from exc
+            raise InferenceError(f"Model loading failed: {exc}") from exc
+        _bump_activity()
 
-        boxes = parse_boxes(raw_text, w, h)
-        logger.info("Detection: %s -> %d boxes for %s", image_path, len(boxes), categories)
+        gpu_mem = get_memory_manager()
+        gpu_mem.empty_cache()
 
-        return {
-            "raw_text": raw_text,
-            "boxes": boxes,
-            "img_w": w,
-            "img_h": h,
-            "orig_w": orig_w,
-            "orig_h": orig_h,
-        }
-    finally:
-        img.close()
-        gpu_mem.full_cleanup()
+        img = None
+        try:
+            img, w, h, orig_w, orig_h = _prepare_detection_image(image_path)
+
+            try:
+                result = worker.detect(img, categories)
+                raw_text = result["answer"]
+            except Exception as exc:
+                raise InferenceError(f"Model inference failed: {exc}") from exc
+
+            boxes = parse_boxes(raw_text, w, h)
+            logger.info("Detection: %s -> %d boxes for %s", image_path, len(boxes), categories)
+
+            return {
+                "raw_text": raw_text,
+                "boxes": boxes,
+                "img_w": w,
+                "img_h": h,
+                "orig_w": orig_w,
+                "orig_h": orig_h,
+            }
+        finally:
+            if img is not None:
+                img.close()
+            gpu_mem.full_cleanup()
+
+
+def detect_batch(image_paths: list[str | Path], categories: list[str]) -> list[dict]:
+    """Detect multiple images in one CUDA batch when available.
+
+    Non-CUDA devices fall back to the stable single-image path.
+    """
+    if not image_paths:
+        return []
+
+    with _model_lock:
+        try:
+            engine = _get_cuda_batch_engine()
+        except Exception as exc:
+            raise InferenceError(f"CUDA batch model loading failed: {exc}") from exc
+
+        if engine is None:
+            return [detect(path, categories) for path in image_paths]
+
+        _bump_activity()
+        gpu_mem = get_memory_manager()
+        gpu_mem.empty_cache()
+
+        results: list[dict] = []
+        batch_size = max(1, settings.vlm_batch_size)
+        query = _detect_query(categories)
+
+        for start in range(0, len(image_paths), batch_size):
+            chunk_paths = image_paths[start : start + batch_size]
+            prepared: list[tuple[Image.Image, int, int, int, int]] = []
+            try:
+                for path in chunk_paths:
+                    prepared.append(_prepare_detection_image(path))
+
+                pairs = [(img, query) for img, *_ in prepared]
+                try:
+                    raw_outputs = engine.generate_batch(
+                        pairs,
+                        temperature=0.0,
+                        max_new_tokens=512,
+                    )
+                except Exception as exc:
+                    raise InferenceError(f"CUDA batch inference failed: {exc}") from exc
+
+                for path, raw_text, (_, w, h, orig_w, orig_h) in zip(
+                    chunk_paths,
+                    raw_outputs,
+                    prepared,
+                    strict=True,
+                ):
+                    boxes = parse_boxes(raw_text, w, h)
+                    logger.info(
+                        "Batch detection: %s -> %d boxes for %s",
+                        path,
+                        len(boxes),
+                        categories,
+                    )
+                    results.append(
+                        {
+                            "raw_text": raw_text,
+                            "boxes": boxes,
+                            "img_w": w,
+                            "img_h": h,
+                            "orig_w": orig_w,
+                            "orig_h": orig_h,
+                        }
+                    )
+            finally:
+                for img, *_ in prepared:
+                    img.close()
+                gpu_mem.full_cleanup()
+
+        return results
 
 
 def get_model_status() -> dict:
@@ -426,16 +585,18 @@ def is_model_loaded() -> bool:
 def unload_model() -> None:
     global _worker, _load_thread
     _stop_watchdog()
-    _load_thread = None
-    if _worker is not None:
-        del _worker.model
-        del _worker.tokenizer
-        del _worker.processor
-        _worker = None
-    get_memory_manager().full_cleanup()
-    with _state_lock:
-        _model_state["state"] = ModelState.UNLOADED
-        _model_state["stage"] = ""
-        _model_state["progress"] = 0
-        _model_state["error"] = ""
+    with _model_lock:
+        _load_thread = None
+        if _worker is not None:
+            del _worker.model
+            del _worker.tokenizer
+            del _worker.processor
+            _worker = None
+        _unload_cuda_batch_engine()
+        get_memory_manager().full_cleanup()
+        with _state_lock:
+            _model_state["state"] = ModelState.UNLOADED
+            _model_state["stage"] = ""
+            _model_state["progress"] = 0
+            _model_state["error"] = ""
     logger.info("Model unloaded")

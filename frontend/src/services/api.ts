@@ -32,6 +32,38 @@ export async function detectImage(
   return data.data;
 }
 
+export async function detectImagesBatch(
+  files: File[],
+  categories: string[],
+  useSam2?: boolean,
+  sam2ScoreThreshold?: number,
+  useSam3?: boolean,
+  sam3Text?: string,
+  useSam3Seg?: boolean,
+  sam3Threshold?: number,
+  sam3MaskThreshold?: number,
+  signal?: AbortSignal,
+): Promise<DetectResponse[]> {
+  const form = new FormData();
+  files.forEach((file) => form.append("files", file));
+  form.append("categories", JSON.stringify(categories));
+  if (useSam3) {
+    form.append("use_sam3", "true");
+    if (sam3Text) form.append("sam3_text", sam3Text);
+    if (useSam3Seg === false) form.append("use_sam3_seg", "false");
+    if (sam3Threshold != null) form.append("sam3_threshold", String(sam3Threshold));
+    if (sam3MaskThreshold != null) form.append("sam3_mask_threshold", String(sam3MaskThreshold));
+  } else if (useSam2) {
+    form.append("use_sam2", "true");
+    if (sam2ScoreThreshold != null) form.append("sam2_score_threshold", String(sam2ScoreThreshold));
+  }
+  const { data } = await request.post<{ data: DetectResponse[] }>("/detect-batch", form, {
+    signal,
+    timeout: DETECT_TIMEOUT * Math.max(1, files.length),
+  });
+  return data.data;
+}
+
 export async function listDetections(
   page = 1,
   pageSize = 50,

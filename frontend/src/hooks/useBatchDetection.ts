@@ -1,3 +1,6 @@
+import { detectImage, detectImagesBatch } from "@/services/api";
+import type { Detection } from "@/types";
+
 export function useBatchDetection() {
   const [batchProgress, setBatchProgress] = useState({ current: 0, total: 0 });
   const batchRef = useRef(false);
@@ -23,6 +26,39 @@ export function useBatchDetection() {
       let elapsed = 0;
 
       try {
+        if (files.length > 1) {
+          const batch = await detectImagesBatch(
+            files,
+            categories,
+            useSam2,
+            sam2ScoreThreshold,
+            useSam3,
+            sam3Text,
+            useSam3Seg,
+            sam3Threshold,
+            sam3MaskThreshold,
+            signal,
+          );
+          if (batch.length !== files.length) {
+            throw new Error(
+              `Batch detection returned ${batch.length} results for ${files.length} files`,
+            );
+          }
+          for (let i = 0; i < batch.length; i++) {
+            if (!batchRef.current || signal?.aborted) break;
+            const data = batch[i];
+            results.push(data);
+            elapsed = Math.round(performance.now() - t0);
+            onEach(data, files[i], i, elapsed);
+            setBatchProgress(
+              i === batch.length - 1
+                ? { current: 0, total: 0 }
+                : { current: i + 1, total: files.length },
+            );
+          }
+          return { results, elapsed };
+        }
+
         for (let i = 0; i < files.length; i++) {
           if (!batchRef.current || signal?.aborted) break;
           const data = await detectImage(

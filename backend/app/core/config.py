@@ -29,6 +29,8 @@ class Settings(BaseSettings):
     model_dir: str = ""
     device: str = ""
     model_id: str = "nvidia/LocateAnything-3B"
+    vlm_batch_size: int = 8
+    max_detection_batch_files: int = 32
     sam2_model_id: str = "facebook/sam2.1-hiera-base-plus"
     sam2_checkpoint_path: str = ""
 

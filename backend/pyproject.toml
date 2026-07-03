@@ -11,6 +11,8 @@ dependencies = [
     "pydantic-settings>=2.6.0",
     "transformers>=4.57.1",
     "torch>=2.6.0",
+    "accelerate>=1.0",
+    "einops>=0.8",
     "Pillow>=11.0.0",
     "opencv-python-headless>=4.10.0",
     "numpy>=2.0.0",
@@ -34,6 +36,7 @@ target-version = "py312"
 line-length = 100
 exclude = [
     "alembic/versions",  # Auto-generated migrations
+    "locateanything_batch",  # Vendored CUDA batch engine
 ]
 
 [tool.ruff.lint]

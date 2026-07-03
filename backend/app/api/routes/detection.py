@@ -16,7 +16,7 @@ from ...models.detection import FilterMode
 from ...repositories.detection import DetectionRepository
 from ...schemas.common import APIResponse, BaseSchema
 from ...schemas.detection import DetectionListItem, DetectionOut, DetectionParams
-from ...services.detection_service import process_detection
+from ...services.detection_service import process_detection, process_detection_batch
 from ...services.locate_anything import get_model_status, is_model_loaded, unload_model
 from ...services.sam2_service import get_sam2_status, is_sam_loaded, unload_sam
 from ...services.sam3_client import is_sam3_running, stop_sam3_server
@@ -87,6 +87,79 @@ async def create_detection(
 
     return APIResponse(
         data=DetectionOut.model_validate(detection).model_dump(by_alias=True),
+    )
+
+
+@router.post("/detect-batch", status_code=201)
+async def create_detection_batch(
+    files: list[UploadFile] = File(...),
+    categories: str = Form(...),
+    use_sam2: bool = Form(False),
+    use_sam3: bool = Form(False),
+    sam2_score_threshold: float = Form(0.0, ge=0.0, le=1.0),
+    sam3_text: str = Form(""),
+    use_sam3_seg: bool = Form(True),
+    sam3_threshold: float = Form(0.5, ge=0.0, le=1.0),
+    sam3_mask_threshold: float = Form(0.5, ge=0.0, le=1.0),
+    repo: DetectionRepository = Depends(get_repo),
+) -> APIResponse:
+    if not files:
+        raise HTTPException(400, detail="files cannot be empty")
+    if len(files) > settings.max_detection_batch_files:
+        raise HTTPException(
+            400,
+            detail=f"files cannot exceed {settings.max_detection_batch_files}",
+        )
+
+    try:
+        cat_list: list[str] = json.loads(categories)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(400, detail="categories must be a JSON array") from exc
+    if not cat_list:
+        raise HTTPException(400, detail="categories cannot be empty")
+
+    for file in files:
+        if not file.content_type or not file.content_type.startswith("image/"):
+            raise HTTPException(400, detail="All files must be images")
+        file.file.seek(0, 2)
+        size_mb = file.file.tell() / (1024 * 1024)
+        file.file.seek(0)
+        if size_mb > settings.max_upload_size_mb:
+            raise HTTPException(
+                400,
+                detail=f"{file.filename} exceeds {settings.max_upload_size_mb}MB limit",
+            )
+
+    saved_files: list[tuple[str, str]] = []
+    for file in files:
+        file.file.seek(0)
+        filepath, _safe_name = _save_upload(file)
+        original_name = Path(file.filename).name  # type: ignore[arg-type]
+        saved_files.append((filepath, original_name))
+
+    try:
+        detections = await process_detection_batch(
+            files=saved_files,
+            categories=cat_list,
+            params=DetectionParams(
+                use_sam2=use_sam2,
+                use_sam3=use_sam3,
+                sam2_score_threshold=sam2_score_threshold,
+                sam3_text=sam3_text,
+                use_sam3_seg=use_sam3_seg,
+                sam3_threshold=sam3_threshold,
+                sam3_mask_threshold=sam3_mask_threshold,
+            ),
+            repo=repo,
+        )
+    except AppError as exc:
+        if not use_sam2 and not use_sam3:
+            for filepath, _original_name in saved_files:
+                Path(filepath).unlink(missing_ok=True)
+        raise HTTPException(exc.status_code, detail=exc.detail) from exc
+
+    return APIResponse(
+        data=[DetectionOut.model_validate(d).model_dump(by_alias=True) for d in detections],
     )
 
 
