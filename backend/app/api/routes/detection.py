@@ -15,7 +15,7 @@ from ...core.exceptions import AppError, NotFoundError
 from ...models.detection import FilterMode
 from ...repositories.detection import DetectionRepository
 from ...schemas.common import APIResponse, BaseSchema
-from ...schemas.detection import DetectionListItem, DetectionOut, DetectionParams
+from ...schemas.detection import DetectionBoxOut, DetectionListItem, DetectionOut, DetectionParams
 from ...services.detection_service import process_detection, process_detection_batch
 from ...services.locate_anything import get_model_status, is_model_loaded, unload_model
 from ...services.sam2_service import get_sam2_status, is_sam_loaded, unload_sam
@@ -227,10 +227,30 @@ class AddBoxBody(BaseSchema):
 
 
 class UpdateBoxBody(BaseSchema):
-    x1: int
-    y1: int
-    x2: int
-    y2: int
+    class_name: str | None = None
+    x1: int | None = None
+    y1: int | None = None
+    x2: int | None = None
+    y2: int | None = None
+
+
+def _validate_box_geometry(
+    *,
+    image_width: int,
+    image_height: int,
+    x1: int,
+    y1: int,
+    x2: int,
+    y2: int,
+) -> None:
+    if x2 <= x1 or y2 <= y1:
+        raise HTTPException(400, detail="box must have positive width and height")
+    if x1 < 0 or y1 < 0:
+        raise HTTPException(400, detail="box coordinates cannot be negative")
+    if image_width > 0 and x2 > image_width:
+        raise HTTPException(400, detail="box x2 exceeds image width")
+    if image_height > 0 and y2 > image_height:
+        raise HTTPException(400, detail="box y2 exceeds image height")
 
 
 @router.post("/detections/{detection_id}/boxes", status_code=201)
@@ -242,11 +262,22 @@ def add_box(
     det = repo.get_by_id(detection_id)
     if not det:
         raise NotFoundError("Detection", detection_id)
-    repo.add_boxes(
+    class_name = body.class_name.strip()
+    if not class_name:
+        raise HTTPException(400, detail="class_name cannot be empty")
+    _validate_box_geometry(
+        image_width=det.image_width,
+        image_height=det.image_height,
+        x1=body.x1,
+        y1=body.y1,
+        x2=body.x2,
+        y2=body.y2,
+    )
+    boxes = repo.add_boxes(
         detection_id,
         [
             {
-                "class_name": body.class_name,
+                "class_name": class_name,
                 "x1": body.x1,
                 "y1": body.y1,
                 "x2": body.x2,
@@ -255,7 +286,7 @@ def add_box(
         ],
         commit=True,
     )
-    return APIResponse(data={"ok": True})
+    return APIResponse(data=DetectionBoxOut.model_validate(boxes[0]).model_dump(by_alias=True))
 
 
 class ReplaceBoxItem(BaseSchema):
@@ -310,12 +341,38 @@ def update_box(
     body: UpdateBoxBody,
     repo: DetectionRepository = Depends(get_repo),
 ) -> APIResponse:
+    det = repo.get_by_id(detection_id)
+    if not det:
+        raise NotFoundError("Detection", detection_id)
     box = repo.get_box(detection_id, box_id)
     if not box:
         raise NotFoundError("DetectionBox", box_id)
-    box.x1, box.y1, box.x2, box.y2 = body.x1, body.y1, body.x2, body.y2
+
+    class_name = box.class_name if body.class_name is None else body.class_name.strip()
+    if not class_name:
+        raise HTTPException(400, detail="class_name cannot be empty")
+
+    x1 = box.x1 if body.x1 is None else body.x1
+    y1 = box.y1 if body.y1 is None else body.y1
+    x2 = box.x2 if body.x2 is None else body.x2
+    y2 = box.y2 if body.y2 is None else body.y2
+    _validate_box_geometry(
+        image_width=det.image_width,
+        image_height=det.image_height,
+        x1=x1,
+        y1=y1,
+        x2=x2,
+        y2=y2,
+    )
+
+    coordinates_changed = (x1, y1, x2, y2) != (box.x1, box.y1, box.x2, box.y2)
+
+    box.class_name = class_name
+    box.x1, box.y1, box.x2, box.y2 = x1, y1, x2, y2
+    if coordinates_changed:
+        box.mask_polygon = None
     repo.update_box(box, commit=True)
-    return APIResponse(data={"ok": True})
+    return APIResponse(data=DetectionBoxOut.model_validate(box).model_dump(by_alias=True))
 
 
 @router.get("/detections/{detection_id}/image")

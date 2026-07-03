@@ -51,6 +51,7 @@ export function Home() {
 
   const {
     handleDrawBox,
+    handleUpdateBox,
     handleDeleteBox,
     handleSaveBoxes,
     toggleBoxVisibility,
@@ -137,6 +138,7 @@ export function Home() {
               isValidation={appMode === "validate"}
               onCanvasModeChange={setCanvasMode}
               onDrawCategoryChange={setDrawCategory}
+              onUpdateBox={handleUpdateBox}
               onDeleteBox={handleDeleteBox}
               onSelectBatch={handleBatchSelect}
               onSelectPending={(url) => {

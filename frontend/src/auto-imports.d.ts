@@ -123,6 +123,7 @@ declare global {
   const unloadModel: typeof import('./services/api').unloadModel
   const unloadSam2: typeof import('./services/api').unloadSam2
   const unloadSam3: typeof import('./services/api').unloadSam3
+  const updateBox: typeof import('./services/api').updateBox
   const uploadCache: typeof import('./lib/constants').uploadCache
   const uploadVideo: typeof import('./services/api').uploadVideo
   const use: typeof import('react').use
@@ -257,7 +258,7 @@ declare global {
   export type { FilterMode } from './lib/filterBoxes'
   import('./lib/filterBoxes')
   // @ts-ignore
-  export type { YoloSeries, ImportResult, ImportProgress, ChunkInitResult } from './services/api'
+  export type { BoxUpdatePayload, YoloSeries, ImportResult, ImportProgress, ChunkInitResult } from './services/api'
   import('./services/api')
   // @ts-ignore
   export type { BBox, Detection, DetectResponse, TrainingJob, KeyFrame, VideoInfo, ListResponse } from './types/index'

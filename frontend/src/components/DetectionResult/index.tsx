@@ -1,5 +1,6 @@
 import { Dropdown } from "antd";
 import { getFileUrl } from "@/lib/cache";
+import type { BoxUpdatePayload } from "@/services/api";
 
 interface Props {
   result: Detection | null;
@@ -16,6 +17,7 @@ interface Props {
   onToggleVisibility: (boxId: string) => void;
   onCanvasModeChange: (mode: "view" | "draw") => void;
   onDrawCategoryChange: (cat: string) => void;
+  onUpdateBox: (boxId: string, box: BoxUpdatePayload) => Promise<void> | void;
   onDeleteBox: (boxId: string) => void;
   onSelectBatch: (det: Detection, file?: File) => void;
   onSelectPending?: (url: string) => void;
@@ -43,6 +45,7 @@ export function DetectionResult({
   onToggleVisibility,
   onCanvasModeChange,
   onDrawCategoryChange,
+  onUpdateBox,
   onDeleteBox,
   onSelectBatch,
   onSelectPending,
@@ -281,6 +284,9 @@ export function DetectionResult({
         boxes={result?.boxes || EMPTY_BOXES}
         hiddenIndices={hiddenIndices}
         onToggleVisibility={onToggleVisibility}
+        imageWidth={result?.imageWidth || 0}
+        imageHeight={result?.imageHeight || 0}
+        onUpdate={onUpdateBox}
         onDelete={onDeleteBox}
       />
     </div>

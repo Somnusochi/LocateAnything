@@ -2,9 +2,9 @@ import { useCallback, useMemo } from "react";
 import toast from "react-hot-toast";
 import { useTranslation } from "react-i18next";
 import { useAppStore } from "@/store/useAppStore";
-import { addBox, deleteBox, saveFilterSettings } from "@/services/api";
+import { addBox, deleteBox, saveFilterSettings, updateBox } from "@/services/api";
 import { applyFilter } from "@/lib/filterBoxes";
-import type { BBox } from "@/types";
+import type { BoxUpdatePayload } from "@/services/api";
 
 export function useDetectionAnnotation() {
   const { t } = useTranslation();
@@ -17,13 +17,7 @@ export function useDetectionAnnotation() {
         return;
       }
       try {
-        await addBox(result.id, { ...raw, className: drawCategory.trim() });
-        const newBox: BBox = {
-          id: `manual-${Date.now()}`,
-          className: drawCategory.trim(),
-          ...raw,
-          confidence: null,
-        };
+        const newBox = await addBox(result.id, { ...raw, className: drawCategory.trim() });
         const updated = { ...result, boxes: [...result.boxes, newBox] };
         setResult(updated);
         setBatchResults((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
@@ -33,6 +27,27 @@ export function useDetectionAnnotation() {
       }
     },
     [result, drawCategory, setBatchResults, setResult, t],
+  );
+
+  const handleUpdateBox = useCallback(
+    async (boxId: string, next: BoxUpdatePayload) => {
+      if (!result) return;
+      try {
+        const updatedBox = await updateBox(result.id, boxId, next);
+        const updated = {
+          ...result,
+          boxes: result.boxes.map((box) => (box.id === boxId ? updatedBox : box)),
+        };
+        setResult(updated);
+        setBatchResults((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+        toast.success(t("resultTable.updateBoxSuccess"));
+      } catch (e) {
+        console.error("Update box failed:", e);
+        toast.error(t("resultTable.updateBoxFailed"));
+        throw e;
+      }
+    },
+    [result, setBatchResults, setResult, t],
   );
 
   const handleDeleteBox = useCallback(
@@ -89,6 +104,7 @@ export function useDetectionAnnotation() {
 
   return {
     handleDrawBox,
+    handleUpdateBox,
     handleDeleteBox,
     handleSaveBoxes,
     toggleBoxVisibility,

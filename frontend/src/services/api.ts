@@ -87,11 +87,32 @@ export async function deleteBox(detectionId: string, boxId: string): Promise<voi
   await request.post(`/detections/${detectionId}/boxes/${boxId}/delete`);
 }
 
+export type BoxUpdatePayload = {
+  className: string;
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
 export async function addBox(
   detectionId: string,
-  box: { className: string; x1: number; y1: number; x2: number; y2: number },
-): Promise<void> {
-  await request.post(`/detections/${detectionId}/boxes`, box);
+  box: BoxUpdatePayload,
+): Promise<BBox> {
+  const { data } = await request.post<{ data: BBox }>(`/detections/${detectionId}/boxes`, box);
+  return data.data;
+}
+
+export async function updateBox(
+  detectionId: string,
+  boxId: string,
+  box: BoxUpdatePayload,
+): Promise<BBox> {
+  const { data } = await request.put<{ data: BBox }>(
+    `/detections/${detectionId}/boxes/${boxId}`,
+    box,
+  );
+  return data.data;
 }
 
 export function exportSingleUrl(id: string): string {
