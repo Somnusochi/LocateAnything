@@ -1,15 +1,15 @@
 import { test, expect } from "@playwright/test";
 
-test.describe("Home page", () => {
+test.describe("Workspace pages", () => {
   test("renders sidebar with model selector", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/annotate");
     await expect(page.locator("text=VLM-AutoYOLO")).toBeVisible();
     await expect(page.getByText("VLM + SAM2")).toBeVisible();
     await expect(page.getByText("SAM3")).toBeVisible();
   });
 
   test("switches between VLM+SAM2 and SAM3 modes", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/annotate");
     // Default: SAM2 checkbox visible
     await expect(page.locator("text=Enable SAM2")).toBeVisible({ timeout: 10000 });
     // Switch to SAM3
@@ -21,26 +21,27 @@ test.describe("Home page", () => {
   });
 
   test("shows history list", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/records");
     // History records are visible (pexels filenames from test data)
     await expect(page.getByText("pexels-").first()).toBeVisible({ timeout: 10000 });
   });
 
   test("clicks history item shows detail on right panel", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/records");
     const firstItem = page.getByText("pexels-").first();
     await firstItem.click();
+    await expect(page).toHaveURL(/\/annotate/);
     // Right panel no longer shows empty placeholder - it should show detection data
     await expect(page.locator("text=pexels-").first()).toBeVisible({ timeout: 10000 });
   });
 
   test("model status labels visible", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/annotate");
     await expect(page.getByText("VLM Model")).toBeVisible({ timeout: 10000 });
   });
 
   test("upload image and run detection", async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/annotate");
 
     // Upload test image via hidden file input
     const TEST_IMAGE = "../test_images/cat/pexels-helen1-30002394.jpg";

@@ -5,6 +5,7 @@ interface Props {
   isFetchingNextPage: boolean;
   fetchNextPage: () => void;
   onSelect: (det: Detection) => void;
+  scrollClassName?: string;
 }
 
 export function HistoryList({
@@ -14,6 +15,7 @@ export function HistoryList({
   isFetchingNextPage,
   fetchNextPage,
   onSelect,
+  scrollClassName = "max-h-64",
 }: Props) {
   const { t } = useTranslation();
   const deleteMut = useDeleteDetectionMutation();
@@ -174,7 +176,7 @@ export function HistoryList({
       {filtered.length === 0 ? (
         <p className="py-4 text-xs text-gray-400 text-center">{t("historyList.noMatchRecords")}</p>
       ) : (
-        <div ref={parentRef} className="max-h-64 overflow-y-auto pr-1">
+        <div ref={parentRef} className={`${scrollClassName} overflow-y-auto pr-1`}>
           <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,

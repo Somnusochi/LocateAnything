@@ -8,6 +8,7 @@ export {}
 declare global {
   const API_BASE: typeof import('./lib/constants').API_BASE
   const Activity: typeof import('react').Activity
+  const AnnotatePage: typeof import('./pages/AnnotatePage').AnnotatePage
   const BOX_COLORS: typeof import('./lib/constants').BOX_COLORS
   const BatchProgress: typeof import('./components/BatchProgress/index').BatchProgress
   const CANVAS_MAX_H: typeof import('./lib/constants').CANVAS_MAX_H
@@ -45,6 +46,7 @@ declare global {
   const ModelStatus: typeof import('./components/ModelStatus/index').ModelStatus
   const QueryClient: typeof import('@tanstack/react-query').QueryClient
   const QueryClientProvider: typeof import('@tanstack/react-query').QueryClientProvider
+  const RecordsPage: typeof import('./pages/RecordsPage').RecordsPage
   const ResultTable: typeof import('./components/ResultTable/index').ResultTable
   const Sam3Status: typeof import('./components/Sam3Status/index').Sam3Status
   const Sidebar: typeof import('./components/Sidebar/index').Sidebar
@@ -55,9 +57,11 @@ declare global {
   const ThemeProvider: typeof import('./components/ThemeProvider/index').ThemeProvider
   const TrainingCandidateList: typeof import('./components/Training/TrainingCandidateList/index').TrainingCandidateList
   const TrainingJobItem: typeof import('./components/Training/TrainingJobItem/index').TrainingJobItem
+  const TrainingPage: typeof import('./pages/TrainingPage').TrainingPage
   const TrainingPanel: typeof import('./components/TrainingPanel/index').TrainingPanel
   const TrainingPreview: typeof import('./components/Training/TrainingPreview/index').TrainingPreview
   const UPLOAD_TIMEOUT: typeof import('./services/request').UPLOAD_TIMEOUT
+  const ValidatePage: typeof import('./pages/ValidatePage').ValidatePage
   const ValidationSettings: typeof import('./components/ValidationSettings/index').ValidationSettings
   const VideoDetail: typeof import('./components/VideoDetail/index').VideoDetail
   const VideoList: typeof import('./components/VideoPanel/VideoList').VideoList

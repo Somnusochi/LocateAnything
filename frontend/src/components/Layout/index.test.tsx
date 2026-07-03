@@ -1,13 +1,20 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { render } from "@/utils/test-utils";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 import {describe, it, expect} from "vitest";
 import { Layout } from "./index";
 
 describe("Layout", () => {
   it("renders without crashing", () => {
-    // Note: Provide basic props if needed, or mock stores/hooks
-    // This is a basic boilerplate test
-    const { container } = render(<Layout {...({} as any)} children={<div></div>} />);
-    expect(container).toBeTruthy();
+    const { getByText } = render(
+      <MemoryRouter initialEntries={["/annotate"]}>
+        <Routes>
+          <Route element={<Layout />}>
+            <Route path="/annotate" element={<div>workspace</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(getByText("VLM-AutoYOLO")).toBeTruthy();
+    expect(getByText("workspace")).toBeTruthy();
   });
 });
