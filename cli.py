@@ -79,16 +79,25 @@ def check_node():
 
 def check_pnpm():
     step("Checking pnpm...")
-    if shutil.which("pnpm"):
-        ok(shutil.which("pnpm"))
+    # Windows 全局安装会生成 pnpm.cmd
+    pnpm = shutil.which("pnpm") or (shutil.which("pnpm.cmd") if IS_WIN else None)
+    if pnpm:
+        ok(pnpm)
         return
-    warn("pnpm not found. Install: npm install -g pnpm   or   brew install pnpm")
+    warn("pnpm not found in PATH. Install: npm install -g pnpm   or   brew install pnpm")
     print("  Attempting: npm install -g pnpm...")
     try:
-        run(["npm", "install", "-g", "pnpm"])
-        ok("pnpm installed")
-    except Exception:
-        fail("Failed to install pnpm. Install manually: npm install -g pnpm")
+        # .cmd 必须经由 cmd.exe 调用
+        npm_install = ["cmd", "/c", "npm", "install", "-g", "pnpm"] if IS_WIN else ["npm", "install", "-g", "pnpm"]
+        run(npm_install)
+        # 安装后需重新确认当前进程能找到 pnpm
+        pnpm = shutil.which("pnpm") or (shutil.which("pnpm.cmd") if IS_WIN else None)
+        if pnpm:
+            ok(f"installed: {pnpm}")
+            return
+        fail("pnpm was installed but is not in PATH. Restart the terminal, then run: pnpm -v")
+    except subprocess.CalledProcessError:
+        fail("Failed to install pnpm. Run manually: npm install -g pnpm")
 
 def check_ffmpeg():
     step("Checking ffmpeg...")
@@ -142,7 +151,9 @@ def install_node_deps():
     if (FRONTEND / "node_modules").exists():
         ok("already exists")
         return
-    run(["pnpm", "install"], cwd=FRONTEND)
+    # npm global installs pnpm as pnpm.cmd on Windows; cmd.exe is required to run it.
+    pnpm_install = ["cmd", "/c", "pnpm", "install"] if IS_WIN else ["pnpm", "install"]
+    run(pnpm_install, cwd=FRONTEND)
     ok("done")
 
 def check_db_config():
