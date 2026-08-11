@@ -47,6 +47,23 @@ def run(cmd, **kwargs):
 def run_output(cmd, **kwargs):
     return subprocess.run(cmd, capture_output=True, text=True, **kwargs).stdout.strip()
 
+def _find_tool(name):
+    candidates = (name, f"{name}.cmd") if IS_WIN else (name,)
+    for candidate in candidates:
+        path = shutil.which(candidate)
+        if path:
+            return path
+    return None
+
+def _tool_command(name, *args):
+    executable = _find_tool(name)
+    if not executable:
+        raise FileNotFoundError(f"{name} not found")
+    command = [executable, *args]
+    if IS_WIN and Path(executable).suffix.lower() in {".cmd", ".bat"}:
+        return ["cmd", "/d", "/c", *command]
+    return command
+
 def is_port_open(port):
     try:
         with socket.create_connection(("localhost", port), timeout=0.5):
@@ -79,13 +96,17 @@ def check_node():
 
 def check_pnpm():
     step("Checking pnpm...")
-    if shutil.which("pnpm"):
-        ok(shutil.which("pnpm"))
+    pnpm = _find_tool("pnpm")
+    if pnpm:
+        ok(pnpm)
         return
     warn("pnpm not found. Install: npm install -g pnpm   or   brew install pnpm")
     print("  Attempting: npm install -g pnpm...")
     try:
-        run(["npm", "install", "-g", "pnpm"])
+        run(_tool_command("npm", "install", "-g", "pnpm"))
+        pnpm = _find_tool("pnpm")
+        if not pnpm:
+            fail("pnpm installation completed but the executable was not found")
         ok("pnpm installed")
     except Exception:
         fail("Failed to install pnpm. Install manually: npm install -g pnpm")
@@ -142,7 +163,7 @@ def install_node_deps():
     if (FRONTEND / "node_modules").exists():
         ok("already exists")
         return
-    run(["pnpm", "install"], cwd=FRONTEND)
+    run(_tool_command("pnpm", "install"), cwd=FRONTEND)
     ok("done")
 
 def check_db_config():

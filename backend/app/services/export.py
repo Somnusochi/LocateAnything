@@ -53,6 +53,21 @@ def export_batch(db: Session, detection_ids: list[str], format: str = "yolo") ->
         if det:
             dets.append(det)
 
+    return _export_detections(dets, format)
+
+
+def export_all(db: Session, format: str = "yolo") -> bytes:
+    """Export every saved detection as a zip file in the requested format."""
+    from ..models.detection import Detection
+
+    dets: list[Detection] = db.query(Detection).order_by(Detection.created_at.asc()).all()
+    if not dets:
+        raise ValueError("No detections available for export")
+
+    return _export_detections(dets, format)
+
+
+def _export_detections(dets: list[Detection], format: str) -> bytes:
     unified_map = _build_class_map(dets)
 
     if format == "yolo":

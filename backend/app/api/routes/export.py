@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session
 from starlette.responses import Response
 
 from ...core.database import get_db
-from ...schemas.detection import ExportBatchIn
-from ...services.export import FORMAT_LABELS, export_batch, export_single
+from ...schemas.detection import ExportAllIn, ExportBatchIn
+from ...services.export import FORMAT_LABELS, export_all, export_batch, export_single
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["export"])
@@ -41,6 +41,25 @@ def download_batch_yolo(
 ) -> Response:
     fmt = body.format or "yolo"
     data = export_batch(db, body.detection_ids, format=fmt)
+    label = FORMAT_LABELS.get(fmt, fmt)
+    return Response(
+        content=data,
+        media_type="application/zip",
+        headers={"Content-Disposition": f'attachment; filename="{label}_dataset.zip"'},
+    )
+
+
+@router.post("/detections/export-all")
+def download_all_detections(
+    body: ExportAllIn | None = None,
+    db: Session = Depends(get_db),
+) -> Response:
+    fmt = body.format if body else "yolo"
+    try:
+        data = export_all(db, format=fmt)
+    except ValueError as exc:
+        raise HTTPException(400, detail=str(exc)) from exc
+
     label = FORMAT_LABELS.get(fmt, fmt)
     return Response(
         content=data,

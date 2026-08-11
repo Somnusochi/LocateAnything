@@ -27,7 +27,7 @@
 - 🎯 **SAM2 / SAM3 segmentation**: Bbox → pixel-precise mask with SAM 2.1 or SAM3 text-driven detection+segmentation in one pass, BBox/Mask toggle on canvas
 - 🎥 **Video annotation**: Intelligent keyframe extraction (scene / motion / interval), SSIM dedup
 - ✏️ **Manual refinement**: Canvas draw mode, NMS filtering, hide/show individual boxes
-- 📦 **Multi-format export/import**: YOLO, YOLO-Seg, COCO JSON, Pascal VOC XML, CreateML JSON — import datasets via chunked ZIP upload (max 10GB, resume support)
+- 📦 **Multi-format export/import**: YOLO, YOLO-Seg, COCO JSON, Pascal VOC XML, CreateML JSON — export all saved detections or selected records as ZIP, import datasets via chunked upload (max 10GB, resume support)
 - 🚀 **Training queue**: Sequential job processing with cancel support, one-click training (YOLOv8 / v11 / v26) with real-time SSE progress
 - ✅ **Model validation**: Batch image / video testing, MJPEG live stream, SSE video inference
 - 💾 **Smart model management**: Lazy loading, idle auto-unload, MPS/CUDA strategy pattern cleanup
@@ -66,7 +66,7 @@ Comprehensive guides: quick start, annotation best practices, training parameter
 
 ## Quick Start
 
-### CLI (Recommended for macOS / Linux)
+### CLI (Recommended for macOS / Linux / Windows)
 
 ```bash
 git clone https://github.com/Somnusochi/VLM-AutoYOLO.git
@@ -75,6 +75,8 @@ python3 cli.py all
 ```
 
 The CLI handles everything: dependency checks, Python venv, pip install, pnpm install, database migrations, and launches both services. Open http://localhost:5173.
+
+On Windows, the CLI recognizes the `pnpm.cmd` and `npm.cmd` shims installed by Node.js and invokes them through the command interpreter, so `python cli.py all` works from PowerShell or CMD.
 
 **Commands:**
 ```bash
@@ -262,7 +264,7 @@ Canvas-based annotation with View / Draw modes.
 
 - Thumbnail + category tag previews, tag-based multi-select filtering
 - Click to view details, re-detect with updated labels, virtual scroll with infinite loading
-- Single / batch export in **5 formats**: YOLO, YOLO-Seg, COCO JSON, Pascal VOC XML, CreateML JSON
+- Single / batch / full-history export in **5 formats**: YOLO, YOLO-Seg, COCO JSON, Pascal VOC XML, CreateML JSON
 - Format selection via dropdown menu, one-click zip download
 
 ### YOLO Training
@@ -343,7 +345,7 @@ Full detailed benchmarks across different hardware configurations: **[docs/BENCH
 - **MPS / CUDA full-pipeline GPU acceleration** — VLM, SAM2, and YOLO training all GPU-accelerated
 - **Strategy Pattern GPU memory** — `gpu_memory.py` centralizes CUDA / MPS cleanup; `expandable_segments:True`
 - **SAM2 / SAM3 mask refinement** — SAM2 refines VLM bboxes; SAM3 does text-driven detection+segmentation in one pass
-- **5 export formats** — YOLO, YOLO-Seg, COCO, Pascal VOC, CreateML
+- **5 export formats** — YOLO, YOLO-Seg, COCO, Pascal VOC, CreateML; export selected records or the full detection history
 - **Detect & Segment training** — polygon labels auto-used when SAM2 masks are available
 - **Cross-platform** — macOS MPS, Windows / Linux CUDA, unified codebase
 - **Unified SSE model status** — single EventSource for VLM, SAM2, SAM3 states; no polling
