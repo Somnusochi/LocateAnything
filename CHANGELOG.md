@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.5.14 (2026-08-11)
+
+### Cross-Platform CLI and Dataset Export
+- Fix: recognize Windows `pnpm.cmd` / `npm.cmd` shims and invoke them through `cmd.exe` during CLI setup.
+- Feat: add `POST /api/v1/detections/export-all` for exporting all saved detections in any supported format.
+- Fix: return a clear `400` response when a full export is requested with no saved detections.
+- Docs: document the Windows CLI behavior and full-dataset export endpoint in EN/ZH README and API docs.
+- Test: add regression coverage for Windows command resolution and full-dataset ZIP export.
+
 ## v1.5.13 (2026-06-29)
 
 ### SAM2 Offline Cache

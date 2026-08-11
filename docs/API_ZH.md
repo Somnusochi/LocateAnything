@@ -34,6 +34,7 @@ Base URL: `http://localhost:8000/api/v1`
 | POST | `/detections/{id}/delete` | 删除检测记录 |
 | GET | `/detections/{id}/export` | 导出单图 YOLO 标注 |
 | POST | `/detections/export-batch` | 多格式批量导出：`yolo` `yolo-seg` `coco` `voc` `createml`（zip） |
+| POST | `/detections/export-all` | 导出全部已保存检测记录（zip）；空库返回 `400` |
 
 ### 模型管理
 
@@ -177,7 +178,7 @@ Base URL: `http://localhost:8000/api/v1`
 
 ## 导出格式
 
-批量导出（`POST /detections/export-batch`）返回 zip 包，结构因格式而异：
+批量导出（`POST /detections/export-batch`）接收指定的检测 ID；全量导出（`POST /detections/export-all`）的 `format` 请求体可选，默认 `yolo`，会包含全部已保存检测记录。两者都返回 zip 包，结构因格式而异：
 
 | 格式 | 文件结构 |
 |------|---------|

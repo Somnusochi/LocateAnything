@@ -27,7 +27,7 @@
 - 🎯 **SAM2 / SAM3 分割**：SAM2 精修 VLM 检测框；SAM3 文本驱动的端到端检测+分割，BBox/Mask 画布独立开关
 - 🎥 **视频标注**：智能关键帧提取（场景/运动/间隔），SSIM 去重
 - ✏️ **人工修正**：Canvas 画框模式，NMS 过滤，单框隐藏
-- 📦 **多格式导入/导出**：YOLO、YOLO-Seg、COCO JSON、Pascal VOC XML、CreateML JSON — 分片上传支持最大 10GB，断点续传
+- 📦 **多格式导入/导出**：YOLO、YOLO-Seg、COCO JSON、Pascal VOC XML、CreateML JSON — 支持全量或选中检测记录导出 ZIP，分片上传支持最大 10GB、断点续传
 - 🚀 **训练队列**：任务排队串行执行，支持取消，一键 YOLO 训练（v8 / v11 / v26）SSE 实时进度
 - ✅ **模型验证**：批量图片/视频测试，MJPEG 实时流，SSE 视频推理
 - 💾 **智能模型管理**：VLM/SAM2/SAM3 惰性加载，闲置自动卸载，统一 SSE 状态推送，MPS/CUDA 策略模式内存回收
@@ -66,7 +66,7 @@
 
 ## 快速开始
 
-### CLI（推荐 macOS / Linux）
+### CLI（推荐 macOS / Linux / Windows）
 
 ```bash
 git clone https://github.com/Somnusochi/VLM-AutoYOLO.git
@@ -75,6 +75,8 @@ python3 cli.py all
 ```
 
 CLI 自动处理所有环境准备：依赖检查、Python venv、pip install、pnpm install、数据库迁移，然后启动前后端。浏览器打开 http://localhost:5173。
+
+Windows 下 CLI 会自动识别 Node.js 安装的 `pnpm.cmd` / `npm.cmd`，并通过命令解释器调用，因此在 PowerShell 或 CMD 中执行 `python cli.py all` 均可正常安装依赖。
 
 **命令：**
 ```bash
@@ -261,7 +263,7 @@ Canvas 画框模式，查看/标注双模式切换。
 
 - 缩略图 + 类别标签，按标签多选筛选
 - 点击查看详情，支持重新检测，虚拟滚动 + 无限加载
-- 单张/批量导出 **5 种格式**：YOLO、YOLO-Seg、COCO JSON、Pascal VOC XML、CreateML JSON
+- 单张/批量/全量历史导出 **5 种格式**：YOLO、YOLO-Seg、COCO JSON、Pascal VOC XML、CreateML JSON
 - 下拉菜单选格式，一键下载 zip
 
 ### YOLO 训练
@@ -342,7 +344,7 @@ nvidia-smi
 - **MPS / CUDA 全链路 GPU 加速** — VLM 推理、SAM2 分割、YOLO 训练均跑 GPU
 - **策略模式 GPU 内存管理** — `gpu_memory.py` 统一 CUDA / MPS 清理；`expandable_segments:True`
 - **SAM2 / SAM3 mask 精修** — SAM2 精修 VLM bbox；SAM3 文本驱动端到端检测+分割
-- **5 种导出格式** — YOLO、YOLO-Seg、COCO、Pascal VOC、CreateML
+- **5 种导出格式** — YOLO、YOLO-Seg、COCO、Pascal VOC、CreateML；支持选中记录或全部检测历史导出
 - **检测 & 分割训练** — SAM2 polygon 标签自动用于分割训练
 - **跨平台** — macOS MPS、Windows / Linux CUDA，统一代码库
 - **智能模型生命周期** — 惰性加载、闲置自动卸载、后台下载带进度

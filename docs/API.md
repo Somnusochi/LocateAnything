@@ -34,6 +34,7 @@ Base URL: `http://localhost:8000/api/v1`
 | POST | `/detections/{id}/delete` | Delete detection |
 | GET | `/detections/{id}/export` | Export single YOLO label |
 | POST | `/detections/export-batch` | Multi-format export: `yolo` `yolo-seg` `coco` `voc` `createml` (zip) |
+| POST | `/detections/export-all` | Export all saved detections in the selected format (zip); empty databases return `400` |
 
 ### Model Management
 
@@ -179,7 +180,7 @@ The list endpoint returns lightweight boxes without `maskPolygon`. The detail en
 
 ## Export Formats
 
-Batch export (`POST /detections/export-batch`) returns a zip with format-specific structure:
+Batch export (`POST /detections/export-batch`) accepts explicit detection IDs. Full-history export (`POST /detections/export-all`) accepts an optional `format` body field and includes every saved detection. Both return a zip with format-specific structure:
 
 | Format Key | Files |
 |-----------|-------|
