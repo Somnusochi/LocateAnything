@@ -9,11 +9,10 @@ from types import SimpleNamespace
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi import FastAPI
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
 from app.api.routes import export as export_routes
-from app.core.database import get_db
+from app.schemas.detection import ExportAllIn
 from app.services.export import export_all
 
 
@@ -65,31 +64,25 @@ def test_export_all_rejects_empty_database() -> None:
 
 
 def test_export_all_route_returns_zip(monkeypatch: pytest.MonkeyPatch) -> None:
-    app = FastAPI()
-    app.include_router(export_routes.router)
-    app.dependency_overrides[get_db] = lambda: object()
     monkeypatch.setattr(export_routes, "export_all", lambda _db, format="yolo": b"zip")
 
-    response = TestClient(app).post("/api/v1/detections/export-all", json={"format": "yolo-seg"})
+    response = export_routes.download_all_detections(ExportAllIn(format="yolo-seg"), object())
 
-    assert response.status_code == 200
-    assert response.content == b"zip"
+    assert response.body == b"zip"
+    assert response.media_type == "application/zip"
     assert response.headers["content-type"] == "application/zip"
 
 
 def test_export_all_route_returns_bad_request_for_empty_database(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    app = FastAPI()
-    app.include_router(export_routes.router)
-    app.dependency_overrides[get_db] = lambda: object()
-
     def raise_empty(_db, format="yolo"):
         raise ValueError("No detections available for export")
 
     monkeypatch.setattr(export_routes, "export_all", raise_empty)
 
-    response = TestClient(app).post("/api/v1/detections/export-all")
+    with pytest.raises(HTTPException) as exc_info:
+        export_routes.download_all_detections(None, object())
 
-    assert response.status_code == 400
-    assert response.json()["detail"] == "No detections available for export"
+    assert exc_info.value.status_code == 400
+    assert exc_info.value.detail == "No detections available for export"
