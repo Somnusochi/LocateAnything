@@ -29,9 +29,15 @@ def _ensure_decord_stub():
     if _decord_loaded:
         return
     if sys.platform in ("darwin", "win32"):
-        stub_dir = str(Path(settings.resolved_model_dir) / "stubs")
-        if Path(stub_dir).exists() and stub_dir not in sys.path:
-            sys.path.insert(0, stub_dir)
+        try:
+            import decord  # type: ignore[import-not-found]  # noqa: F401
+        except ImportError:
+            import decord_stub
+
+            # Transformers checks optional imports before loading remote model
+            # code. Register the bundled image-only compatibility shim under
+            # the package name it expects.
+            sys.modules["decord"] = decord_stub
     _decord_loaded = True
 
 
@@ -393,6 +399,7 @@ def detect(image_path: str | Path, categories: list[str]) -> dict:
         try:
             result = worker.detect(img, categories)
             raw_text = result["answer"]
+            logger.debug("Raw model response: %r", raw_text)
         except Exception as exc:
             raise InferenceError(f"Model inference failed: {exc}") from exc
 

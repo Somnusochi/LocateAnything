@@ -16,6 +16,38 @@ cli = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(cli)
 
 
+def test_partial_model_cache_downloads(monkeypatch, tmp_path):
+    model = tmp_path / "model"
+    model.mkdir()
+    (model / "config.json").write_text("{}")
+    calls = []
+    monkeypatch.setattr(cli, "BACKEND", tmp_path)
+    monkeypatch.setattr(cli, "run", lambda *a, **k: calls.append(a))
+    cli.download_vlm()
+    assert calls
+
+
+@pytest.mark.parametrize("windows", [True, False])
+def test_frontend_launch_resolves_tool(monkeypatch, windows):
+    import urllib.request
+    from types import SimpleNamespace
+
+    calls = []
+    monkeypatch.setattr(cli, "IS_WIN", windows)
+    monkeypatch.setattr(cli, "is_port_open", lambda _: False)
+    monkeypatch.setattr(cli.time, "sleep", lambda _: None)
+    monkeypatch.setattr(cli.shutil, "which", lambda _: "pnpm.cmd" if windows else "/bin/pnpm")
+    monkeypatch.setattr(urllib.request, "urlopen", lambda *a, **k: None)
+    monkeypatch.setattr(
+        cli.subprocess,
+        "Popen",
+        lambda cmd, **k: calls.append(cmd) or SimpleNamespace(poll=lambda: None),
+    )
+    cli.start_frontend()
+    expected = ["cmd", "/d", "/c", "pnpm.cmd"] if windows else ["/bin/pnpm"]
+    assert calls[0] == [*expected, "dev", "--port", str(cli.FRONTEND_PORT)]
+
+
 def test_failed_migration_stops_setup(monkeypatch, capsys):
     monkeypatch.setattr(cli, "ALEMBIC", sys.executable)
     with pytest.raises(subprocess.CalledProcessError):

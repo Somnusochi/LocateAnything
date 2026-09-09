@@ -214,10 +214,29 @@ SAM2_MODEL_ID = "facebook/sam2.1-hiera-base-plus"
 def download_vlm():
     step("VLM model (LocateAnything-3B, ~6GB)...")
     model_dir = BACKEND / "model"
-    if model_dir.exists() and any(model_dir.iterdir()):
+    required_files = (
+        "config.json",
+        "model.safetensors.index.json",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+        "modeling_locateanything.py",
+        "modeling_qwen2.py",
+        "modeling_vit.py",
+        "preprocessor_config.json",
+        "processing_locateanything.py",
+        "processor_config.json",
+        "special_tokens_map.json",
+        "tokenizer_config.json",
+        "vocab.json",
+    )
+    if (
+        model_dir.exists()
+        and not any(model_dir.glob("*.segments.json"))
+        and all((model_dir / name).is_file() for name in required_files)
+    ):
         ok("already cached")
         return
-    print(f"  Downloading to {model_dir}... (~10-30 min)")
+    print(f"  Downloading missing model files to {model_dir}... (~10-30 min)")
     try:
         run(
             [str(PYTHON), "-c",
@@ -316,7 +335,7 @@ def start_frontend():
         warn(f"Port {FRONTEND_PORT} already in use. Try: FRONTEND_PORT={FRONTEND_PORT + 1} python3 cli.py start")
         return None
     proc = subprocess.Popen(
-        ["pnpm", "dev", "--port", str(FRONTEND_PORT)],
+        _tool_command("pnpm", "dev", "--port", str(FRONTEND_PORT)),
         cwd=FRONTEND,
         env={**os.environ, "VITE_BACKEND_PORT": str(BACKEND_PORT)},
         stdout=subprocess.DEVNULL,

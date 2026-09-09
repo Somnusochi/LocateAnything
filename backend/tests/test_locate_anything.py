@@ -5,6 +5,27 @@ import pytest
 from app.services.locate_anything import parse_boxes
 
 
+def test_bundled_decord_fallback(monkeypatch):
+    import builtins
+    import sys
+
+    from app.services import locate_anything
+
+    original = builtins.__import__
+
+    def without_decord(name, *args, **kwargs):
+        if name == "decord":
+            raise ImportError("decord unavailable")
+        return original(name, *args, **kwargs)
+
+    monkeypatch.setattr(builtins, "__import__", without_decord)
+    monkeypatch.setattr(sys, "platform", "win32")
+    monkeypatch.delitem(sys.modules, "decord", raising=False)
+    monkeypatch.setattr(locate_anything, "_decord_loaded", False)
+    locate_anything._ensure_decord_stub()
+    assert sys.modules["decord"].VideoReader
+
+
 def test_parse_boxes_single():
     raw = "<ref>cat</ref><box><100><200><300><400></box>"
     boxes = parse_boxes(raw, 1000, 1000)

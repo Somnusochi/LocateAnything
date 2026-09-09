@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.5.16 (2026-09-09)
+
+- Merge: PR #8 by PyTs1n9 with maintainer compatibility adjustments.
+- Feat: add full-history YOLO Seg export to the training panel.
+- Fix: register the bundled decord fallback on macOS/Windows.
+- Fix: check required model cache files before skipping downloads.
+- Fix: resolve frontend launch commands across Windows and Unix platforms.
+- Retain existing port and GPU behavior; exclude the contributor's local database.
+
 ## v1.5.15 (2026-09-09)
 
 - Fix: normalize repository string IDs to UUIDs for SQLite reads and annotation writes (PyTs1n9, PR #8).
