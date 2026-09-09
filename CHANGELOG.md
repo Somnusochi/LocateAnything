@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.5.15 (2026-09-09)
+
+- Fix: support fresh SQLite migrations while retaining PostgreSQL JSONB. Thanks to PyTs1n9 (SQLite portion of PR #8).
+- Fix: stop setup when database migrations fail instead of reporting success.
+- Fix: preserve backend startup output so the original error is visible (issue #9).
+- Test: cover fresh SQLite migrations, failed setup, and startup diagnostics.
+
 ## v1.5.14 (2026-08-11)
 
 ### Cross-Platform CLI and Dataset Export

@@ -176,15 +176,12 @@ def check_db_config():
 
 def run_migrations():
     step("Running database migrations...")
-    result = run_output(
+    run(
         [str(ALEMBIC), "upgrade", "head"],
         cwd=BACKEND,
         env={**os.environ, "PYTHONPATH": str(BACKEND)},
     )
-    if "Running" in result:
-        ok("migrations applied")
-    else:
-        ok("up to date")
+    ok("database migrations completed")
 
 def check_sam3_token():
     """Guide SAM3 setup — needs HF_TOKEN for the gated facebook/sam3 model."""
@@ -298,14 +295,12 @@ def start_backend():
         [str(UVICORN), "app.main:app", "--host", "0.0.0.0", "--port", str(BACKEND_PORT)],
         cwd=BACKEND,
         env={**os.environ, "PYTHONPATH": str(BACKEND)},
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
     )
     import urllib.request
     for _ in range(30):
         time.sleep(0.5)
         if proc.poll() is not None:
-            fail(f"Backend process exited with code {proc.returncode}. Check logs.")
+            fail(f"Backend process exited with code {proc.returncode}. See output above.")
         try:
             urllib.request.urlopen(f"http://localhost:{BACKEND_PORT}/api/health", timeout=1)
             ok("backend ready")

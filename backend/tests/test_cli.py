@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import importlib.util
+import subprocess
+import sys
 from pathlib import Path
 
 import pytest
@@ -12,6 +14,31 @@ SPEC = importlib.util.spec_from_file_location("vlm_cli", ROOT / "cli.py")
 assert SPEC and SPEC.loader
 cli = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(cli)
+
+
+def test_failed_migration_stops_setup(monkeypatch, capsys):
+    monkeypatch.setattr(cli, "ALEMBIC", sys.executable)
+    with pytest.raises(subprocess.CalledProcessError):
+        cli.run_migrations()
+    assert "up to date" not in capsys.readouterr().out
+
+
+def test_backend_failure_preserves_output(monkeypatch):
+    from types import SimpleNamespace
+
+    calls = []
+    monkeypatch.setattr(cli, "is_port_open", lambda _: False)
+    monkeypatch.setattr(cli.time, "sleep", lambda _: None)
+
+    def spawn(*args, **kwargs):
+        calls.append(kwargs)
+        return SimpleNamespace(poll=lambda: 3, returncode=3)
+
+    monkeypatch.setattr(cli.subprocess, "Popen", spawn)
+    with pytest.raises(SystemExit):
+        cli.start_backend()
+    assert calls[0].get("stdout") is None
+    assert calls[0].get("stderr") is None
 
 
 def test_check_pnpm_accepts_windows_cmd_shim(monkeypatch: pytest.MonkeyPatch) -> None:
