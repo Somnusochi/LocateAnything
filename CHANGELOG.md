@@ -2,6 +2,8 @@
 
 ## v1.5.15 (2026-09-09)
 
+- Fix: normalize repository string IDs to UUIDs for SQLite reads and annotation writes (PyTs1n9, PR #8).
+
 - Fix: support fresh SQLite migrations while retaining PostgreSQL JSONB. Thanks to PyTs1n9 (SQLite portion of PR #8).
 - Fix: stop setup when database migrations fail instead of reporting success.
 - Fix: preserve backend startup output so the original error is visible (issue #9).
